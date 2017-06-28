@@ -3,16 +3,17 @@
 
 This is a repository for [Short Course on Systems Genetics](https://www.jax.org/education-and-learning/education-calendar/2015/september/short-course-on-systems-genetics) (9/27 - 10/02/2015) at [The Jackson Laboratory](http://www.jax.org) that includes the following tutorials:
 
-* __kallisto & EMASE__ (KB Choi & N Raghupathy): generate an index, pseudo-align reads and quantify the expression 
-* __DESeq2__ (N Raghupathy): detect differential expression between groups of RNASeq samples
-* __DOQTL__ (D Gatti): kinship matrix, linkage and association mapping, eQTL viewer
-* __Mediation analysis__ (S Munger, P Simecek & G Churchill): 
+* __kallisto, EMASE & g2gtools__ (KB Choi & N Raghupathy) [[markdown]](https://github.com/churchill-lab/sysgen2015/blob/master/markdown/RNASeq_pipeline.md): generate an index, pseudo-align reads and quantify the expression 
+* __DESeq2__ (N Raghupathy) [[markdown]](https://github.com/churchill-lab/sysgen2015/blob/master/markdown/Differential_Expression.Rmd): detect differential expression between groups of RNASeq samples
+* __DOQTL__ (D Gatti) [[markdown]](https://github.com/churchill-lab/sysgen2015/blob/master/markdown/DOQTL_workshop_2015.Rmd): kinship matrix, linkage and association mapping, eQTL viewer
+* __Mediation analysis__ (S Munger, P Simecek & G Churchill) [[markdown1]](https://github.com/churchill-lab/sysgen2015/blob/master/markdown/mediation-pqtl-01.Rmd) [[markdown2]](https://github.com/churchill-lab/sysgen2015/blob/master/markdown/mediation-glul.Rmd) [[markdown3]](https://cdn.rawgit.com/churchill-lab/sysgen2015/master/markdown/mediation.examples.html): find an intermediate between genotype and trans-regulated gene/protein
+* __D3 viewers__: [eQTL](http://cgd.jax.org/ShortCourse2015/eqtl), [pQTL](http://cgd.jax.org/ShortCourse2015/pqtl)
 
 The participants use their web browsers to connect to customized [Docker](https://docs.docker.com/) containers hosted on [Digital Ocean](https://www.digitalocean.com/?refcode=673c97887267) virtual machines (see screen captures below).
 
 ![rstudio](figures/rstudio.jpg) | ![terminal](figures/butterfly.jpg)
 
-Docker is a lightweight container virtualization platform. We created two Docker images for this course: [simecek/addictioncourse2015](https://github.com/simecek/AddictionCourse2015/blob/master/Dockerfile) (RStudio, DOQTL, DESeq2) and [kbchoi/asesuite](https://github.com/simecek/AddictionCourse2015/blob/master/Dockerfile_asesuite) (kallisto, EMASE).  You can run docker containers on your computer or in the cloud environments like AWS, Digital Ocean, Microsoft Azure or Google Cloud. [Dockerfile](https://github.com/simecek/AddictionCourse2015/blob/master/Dockerfile_asesuite) can be also used as a list of instructions how to install the software on your computer.
+Docker is a lightweight container virtualization platform. We created three Docker images for this course: [churchill/doqtl](https://github.com/churchill-lab/sysgen2015/tree/master/docker/doqtl) (RStudio, DOQTL, DESeq2), [churchill/asesuite](https://github.com/churchill-lab/sysgen2015/blob/master/docker/asesuite/Dockerfile) (kallisto, EMASE) and [churchill/webapp](https://github.com/churchill-lab/sysgen2015/blob/master/docker/webapp/Dockerfile) (eQTL/pQTL viewer).  You can run docker containers on your computer or in the cloud environments like AWS, Digital Ocean, Microsoft Azure or Google Cloud. [Dockerfiles](https://github.com/churchill-lab/sysgen2015/blob/master/docker/asesuite/Dockerfile) can also serve as a list of instructions how to install the software on your computer.
 
 ## How to start Digital Ocean droplet?
 
@@ -32,38 +33,36 @@ Scroll down to "Select image", click on 'Applications' tab and select Docker. Cl
 
 ![Docker button](figures/docker.jpg)
 
-* Note down your droplet's IP.ADDRESS. SSH into your droplet (`ssh root@DROPLET.IP.ADDRESS`) and pull docker images
+* Note down your droplet's IP.ADDRESS. SSH into your droplet (`ssh root@IP.ADDRESS`) and pull docker images
 ```{r}
   docker pull rocker/hadleyverse
-  docker pull simecek/addictioncourse2015
-  docker pull kbchoi/asesuite
+  docker pull churchill/doqtl
+  docker pull churchill/asesuite
+  docker pull ipython/scipystack
+  docker pull churchill/webapp
 ```
-* Next, download required datasets (~30 minutes)
-```{r}
-  mkdir -p /sanger
-  chmod --recursive 755 /sanger
-  wget --directory-prefix=/sanger ftp://ftp-mouse.sanger.ac.uk/REL-1505-SNPs_Indels/mgp.v5.merged.snps_all.dbSNP142.vcf.gz.tbi
-  wget --directory-prefix=/sanger ftp://ftp-mouse.sanger.ac.uk/REL-1505-SNPs_Indels/mgp.v5.merged.snps_all.dbSNP142.vcf.gz
-  mkdir -p /kbdata
-  chmod --recursive 755 /kbdata
-  wget --directory-prefix=/kbdata ftp://ftp.jax.org/kb/individualized.transcriptome.fa.gz
-  wget --directory-prefix=/kbdata ftp://ftp.jax.org/kb/rawreads.fastq.gz
+* Next, download the required datasets (~30 minutes)
 ```
-* Finally, run docker containers. If you want to link it to your own data folder like `/mydata` then use additional `-v` option like `-v /mydata:/mydata`
+   wget https://raw.githubusercontent.com/churchill-lab/sysgen2015/master/scripts/download_data_from_ftp.sh
+   /bin/bash download_data_from_ftp.sh
+   rm download_data_from_ftp.sh
+```
+* Finally, run docker containers. 
 ```{r}
-  docker run -d -v /data:/data -p 8787:8787 -e USER=rstudio -e PASSWORD=rstudio simecek/addictioncourse2015
-  docker run -dt -v /data:/data -p 8080:8080 kbchoi/asesuite
+  docker run -d -v /data:/data -p 8787:8787 -e USER=rstudio -e PASSWORD=sysgen churchill/doqtl
+  docker run -dt -v /data:/data -p 43210:43210 -p 43211:43211  churchill/asesuite
+  docker run -dt -v /data:/data -p 8888:8888 -p 8889:8889 churchill/webapp /usr/bin/start-app.sh
 ```
 
 ### For advanced users - create a virtual machine with R/analogsea package
 
 * Install [R/analogsea](https://github.com/sckott/analogsea) package to your computer
 * Create [Digital Ocean API key](https://cloud.digitalocean.com/settings/applications) and copy it to the second line of a script below
-* Run [the script](https://github.com/simecek/AddictionCourse2015/blob/master/scripts/run_one_DO_machine.R)
+* Run [the script](https://github.com/churchill-lab/sysgen2015/blob/master/scripts/run_one_DO_machine.R)
 
 
 ### Access your virtual machine in the web browser
 
-In your browser you can now access RStudio at http://DROPLET.IP.ADDRESS:8787 (user: rstudio, password: rstudio) and the terminal at http://DROPLET.IP.ADDRESS:8080 (user: root, password: root).
+In your browser you can now access RStudio at http://IP.ADDRESS:8787 (user: rstudio, password: sysgen) and the terminal at http://IP.ADDRESS:43210 (user: root, password: sysgen). The eQTL and pQTL viewers are running at http://IP.ADDRESS:8888 and http://IP.ADDRESS:8889, respectively.
 
 You are paying for your Digital Ocean machine as long as it is running. Do not forget to destroy it when you are done!
